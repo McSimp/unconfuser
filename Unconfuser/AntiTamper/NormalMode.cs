@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 
-namespace Unconfuser
+namespace Unconfuser.AntiTamper
 {
     class NormalMode
     {
@@ -22,7 +22,7 @@ namespace Unconfuser
             this.v = v;
         }
 
-        public void DecryptSection(Stream inputStream, uint encryptedSectionName)
+        public void DecryptSection(Stream inputStream)
         {
             var reader = new BinaryReader(inputStream);
 
@@ -40,18 +40,23 @@ namespace Unconfuser
             {
                 uint nameHash = reader.ReadUInt32() * reader.ReadUInt32();
                 inputStream.Position += 8;
-                if (nameHash == encryptedSectionName)
+
+                uint sectSize = reader.ReadUInt32();
+                uint sectLoc = reader.ReadUInt32();
+
+                inputStream.Position += 12;
+
+                uint characteristics = reader.ReadUInt32();
+
+                if (characteristics == 0xE0000040) // This is the encrypted section
                 {
-                    encSize = reader.ReadUInt32();
-                    encLoc = reader.ReadUInt32();
+                    encSize = sectSize;
+                    encLoc = sectLoc;
                 }
                 else if (nameHash != 0)
                 {
-                    uint sectSize = reader.ReadUInt32();
-                    uint sectLoc = reader.ReadUInt32();
                     Hash(inputStream, reader, sectLoc, sectSize);
                 }
-                inputStream.Position += 16;
             }
 
             uint[] key = DeriveKey();
